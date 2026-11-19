@@ -1,0 +1,9 @@
+{
+  "name": "seven-ai-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SEVEN AI ENGINE - Arabic PWA starter",
+  "scripts": {"start": "node server.js"},
+  "dependencies": {"express": "^4.21.2"},
+  "engines": {"node": ">=18"}
+}
