@@ -1,0 +1,12 @@
+{
+  "name": "SEVEN AI ENGINE",
+  "short_name": "SEVEN AI",
+  "description": "SEVEN AI IMAGE ENGINE",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": []
+}
