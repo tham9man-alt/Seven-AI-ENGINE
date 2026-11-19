@@ -1,0 +1,67 @@
+
+export async function onRequestPost({ request, env }) {
+  try {
+    if (!env.OPENAI_API_KEY) {
+      return Response.json(
+        { error: "مفتاح تشغيل المحرك غير مضبوط" },
+        { status: 500 }
+      );
+    }
+
+    const body = await request.json();
+    const prompt = body.prompt;
+    const style = body.style || "3D";
+    const allowedSizes = [
+      "1024x1024",
+      "1024x1536",
+      "1536x1024"
+    ];
+
+    const size = allowedSizes.includes(body.size)
+      ? body.size
+      : "1024x1024";
+
+    if (!prompt || !prompt.trim()) {
+      return Response.json(
+        { error: "اكتب وصف الصورة أولاً" },
+        { status: 400 }
+      );
+    }
+
+    const response = await fetch(
+      "https://api.openai.com/v1/images/generations",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${env.OPENAI_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "gpt-image-1",
+          prompt: `${prompt}. Artistic style: ${style}. High quality, highly detailed.`,
+          size,
+          n: 1
+        })
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return Response.json(
+        { error: result.error?.message || "فشل توليد الصورة" },
+        { status: response.status }
+      );
+    }
+
+    const image = `data:image/png;base64,${result.data[0].b64_json}`;
+
+    return Response.json({ image });
+
+  } catch (error) {
+    return Response.json(
+      { error: "حدث خطأ أثناء تشغيل المحرك" },
+      { status: 500 }
+    );
+  }
+}
