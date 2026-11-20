@@ -1,0 +1,74 @@
+<!doctype html>
+
+<html lang="ar" dir="rtl">  
+<head>  
+  <meta charset="utf-8">  
+  <meta name="viewport" content="width=device-width, initial-scale=1">  
+  <meta name="theme-color" content="#101426">  
+  <meta name="description" content="SEVEN AI ENGINE - استوديو إنشاء الصور بالذكاء الاصطناعي">  
+  <link rel="manifest" href="/manifest.webmanifest">  
+  <link rel="stylesheet" href="/style.css">  
+  <title>SEVEN AI ENGINE</title>  
+</head>  
+<body>  
+  <main class="shell">  
+    <header class="topbar">  
+      <div class="mark">7</div>  
+      <div>  
+        <p class="eyebrow">استوديو الإبداع الذكي</p>  
+        <h1>SEVEN <span>AI ENGINE</span></h1>  
+      </div>  
+      <div class="online"><i></i> مساحة العمل</div>  
+    </header>  <section class="hero">  
+  <p class="eyebrow">حوّل الفكرة إلى صورة</p>  
+  <h2>خيالك يبدأ من هنا.</h2>  
+  <p class="intro">اكتب وصف الصورة التي تتخيلها، واختر الإعدادات، ثم ابدأ الإنشاء.</p>  
+</section>  
+
+<section class="panel">  
+  <label for="prompt">وصف الصورة</label>  
+  <textarea id="prompt" rows="5" placeholder="مثال: مشهد سينمائي واقعي لشخص يتسلق جبلاً وقت شروق الشمس، إضاءة درامية وتفاصيل فائقة..."></textarea>  
+  <div class="controls">  
+    <div class="field">  
+      <label for="style">الأسلوب</label>  
+      <select id="style">  
+        <option value="واقعي سينمائي">واقعي سينمائي</option>  
+        <option value="ثلاثي الأبعاد 3D">ثلاثي الأبعاد 3D</option>  
+        <option value="أنمي">أنمي</option>  
+        <option value="فن رقمي">فن رقمي</option>  
+        <option value="تصميم تجريدي">تصميم تجريدي</option>  
+      </select>  
+    </div>  
+    <div class="field">  
+      <label for="ratio">الأبعاد</label>  
+      <select id="ratio">  
+        <option value="1024x1024">مربع 1:1</option>  
+        <option value="1024x1536">عمودي</option>  
+        <option value="1536x1024">أفقي</option>  
+      </select>  
+    </div>  
+  </div>  
+  <button id="generate" class="primary">✦ إنشاء الصورة</button>  
+  <p id="status" class="status" aria-live="polite">جاهز لاستقبال فكرتك.</p>  
+</section>  
+
+<section class="result-section">  
+  <div class="section-head">  
+    <h3>منطقة النتيجة</h3>  
+    <span>معاينة الصورة</span>  
+  </div>  
+  <div id="result" class="result">  
+    <div class="placeholder">  
+      <div class="spark">✧</div>  
+      <p>ستظهر الصورة هنا بعد اكتمال الإنشاء</p>  
+    </div>  
+  </div>  
+  <a id="download" class="download hidden" download="seven-ai-image.png">تنزيل الصورة</a>  
+</section>  
+
+<footer>SEVEN AI ENGINE <span>•</span> إصدار تجريبي أولي</footer>
+
+  </main>  
+  <script src="/app.js"></script>  
+</body>  
+</html>
