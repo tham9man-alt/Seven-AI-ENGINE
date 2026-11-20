@@ -1,0 +1,12 @@
+{
+  "name": "SEVEN AI ENGINE",
+  "short_name": "SEVEN AI",
+  "description": "محرك إنشاء الصور بالذكاء الاصطناعي",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#101827",
+  "theme_color": "#101827",
+  "orientation": "portrait",
+  "lang": "ar",
+  "dir": "rtl"
+}
