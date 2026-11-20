@@ -3,6 +3,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    // توليد الصور
     if (url.pathname === "/api/generate" && request.method === "POST") {
       try {
         if (!env.OPENAI_API_KEY) {
@@ -69,10 +70,22 @@ export default {
       }
     }
 
+    // عرض الصفحة الرئيسية
     if (env.ASSETS) {
-      return env.ASSETS.fetch(request);
+      const assetUrl = new URL(request.url);
+
+      if (assetUrl.pathname === "/") {
+        assetUrl.pathname = "/index.html";
+      }
+
+      return env.ASSETS.fetch(
+        new Request(assetUrl, request)
+      );
     }
 
-    return new Response("Not Found", { status: 404 });
+    return new Response(
+      "Assets binding not found",
+      { status: 500 }
+    );
   }
 };
