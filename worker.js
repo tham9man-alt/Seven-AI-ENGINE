@@ -27,11 +27,17 @@ function randomBytes(length) {
 function base64url(bytes) {
   let binary = "";
   for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 }
 
 async function hashToken(token) {
-  return hex(await crypto.subtle.digest("SHA-256", encoder.encode(token)));
+  return hex(await crypto.subtle.digest(
+    "SHA-256",
+    encoder.encode(token)
+  ));
 }
 
 async function hashPassword(password, salt) {
@@ -59,8 +65,10 @@ async function hashPassword(password, salt) {
 
 function getCookie(request, name) {
   const cookies = request.headers.get("Cookie") || "";
-  const item = cookies.split(";").map(x => x.trim())
+  const item = cookies.split(";")
+    .map(x => x.trim())
     .find(x => x.startsWith(name + "="));
+
   return item ? item.slice(name.length + 1) : null;
 }
 
@@ -75,7 +83,9 @@ function clearCookie() {
 async function createSession(db, userId) {
   const token = base64url(randomBytes(32));
   const tokenHash = await hashToken(token);
-  const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const expires = new Date(
+    Date.now() + 7 * 24 * 60 * 60 * 1000
+  ).toISOString();
 
   await db.prepare(
     "INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)"
@@ -107,11 +117,22 @@ export default {
     const db = env.DB;
 
     // Registration
-    if (url.pathname === "/api/auth/register" && request.method === "POST") {
-      if (!db) return json({ error: "قاعدة البيانات غير مربوطة." }, 500);
+    if (
+      url.pathname === "/api/auth/register" &&
+      request.method === "POST"
+    ) {
+      console.log("REGISTER REQUEST RECEIVED");
 
-      if (request.headers.get("Origin") &&
-          request.headers.get("Origin") !== url.origin) {
+      if (!db) {
+        console.error("REGISTER ERROR: DB binding missing");
+        return json({ error: "قاعدة البيانات غير مربوطة." }, 500);
+      }
+
+      if (
+        request.headers.get("Origin") &&
+        request.headers.get("Origin") !== url.origin
+      ) {
+        console.warn("REGISTER ERROR: Origin mismatch");
         return json({ error: "طلب غير مسموح." }, 403);
       }
 
@@ -120,12 +141,21 @@ export default {
         const email = String(body.email || "").trim().toLowerCase();
         const password = String(body.password || "");
 
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
-          return json({ error: "أدخل بريدًا إلكترونيًا صحيحًا." }, 400);
+        if (
+          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+          email.length > 254
+        ) {
+          return json(
+            { error: "أدخل بريدًا إلكترونيًا صحيحًا." },
+            400
+          );
         }
 
         if (password.length < 10 || password.length > 128) {
-          return json({ error: "كلمة المرور يجب أن تكون بين 10 و128 حرفًا." }, 400);
+          return json(
+            { error: "كلمة المرور يجب أن تكون بين 10 و128 حرفًا." },
+            400
+          );
         }
 
         const existing = await db.prepare(
@@ -133,7 +163,10 @@ export default {
         ).bind(email).first();
 
         if (existing) {
-          return json({ error: "تعذر إنشاء الحساب بهذا البريد." }, 409);
+          return json(
+            { error: "تعذر إنشاء الحساب بهذا البريد." },
+            409
+          );
         }
 
         const id = crypto.randomUUID();
@@ -146,22 +179,36 @@ export default {
 
         const token = await createSession(db, id);
 
+        console.log("REGISTER SUCCESS");
+
         return json(
           { success: true, user: { id, email } },
           201,
           { "Set-Cookie": sessionCookie(token) }
         );
+
       } catch (error) {
-        return json({ error: "تعذر إنشاء الحساب." }, 500);
+        console.error("REGISTER ERROR:", error);
+        return json(
+          { error: "تعذر إنشاء الحساب." },
+          500
+        );
       }
     }
 
     // Login
-    if (url.pathname === "/api/auth/login" && request.method === "POST") {
-      if (!db) return json({ error: "قاعدة البيانات غير مربوطة." }, 500);
+    if (
+      url.pathname === "/api/auth/login" &&
+      request.method === "POST"
+    ) {
+      if (!db) {
+        return json({ error: "قاعدة البيانات غير مربوطة." }, 500);
+      }
 
-      if (request.headers.get("Origin") &&
-          request.headers.get("Origin") !== url.origin) {
+      if (
+        request.headers.get("Origin") &&
+        request.headers.get("Origin") !== url.origin
+      ) {
         return json({ error: "طلب غير مسموح." }, 403);
       }
 
@@ -175,45 +222,81 @@ export default {
         ).bind(email).first();
 
         if (!user || password.length > 128) {
-          return json({ error: "البريد أو كلمة المرور غير صحيحة." }, 401);
+          return json(
+            { error: "البريد أو كلمة المرور غير صحيحة." },
+            401
+          );
         }
 
-        const passwordHash = await hashPassword(password, user.password_salt);
+        const passwordHash = await hashPassword(
+          password,
+          user.password_salt
+        );
 
         if (passwordHash !== user.password_hash) {
-          return json({ error: "البريد أو كلمة المرور غير صحيحة." }, 401);
+          return json(
+            { error: "البريد أو كلمة المرور غير صحيحة." },
+            401
+          );
         }
 
         const token = await createSession(db, user.id);
 
         return json(
-          { success: true, user: { id: user.id, email: user.email } },
+          {
+            success: true,
+            user: { id: user.id, email: user.email }
+          },
           200,
           { "Set-Cookie": sessionCookie(token) }
         );
+
       } catch (error) {
-        return json({ error: "تعذر تسجيل الدخول." }, 500);
+        console.error("LOGIN ERROR:", error);
+        return json(
+          { error: "تعذر تسجيل الدخول." },
+          500
+        );
       }
     }
 
     // Current user
-    if (url.pathname === "/api/auth/me" && request.method === "GET") {
-      if (!db) return json({ error: "قاعدة البيانات غير مربوطة." }, 500);
+    if (
+      url.pathname === "/api/auth/me" &&
+      request.method === "GET"
+    ) {
+      if (!db) {
+        return json({ error: "قاعدة البيانات غير مربوطة." }, 500);
+      }
 
       try {
         const user = await getUser(request, db);
-        return json({ authenticated: !!user, user: user || null });
+        return json({
+          authenticated: !!user,
+          user: user || null
+        });
       } catch (error) {
-        return json({ error: "تعذر التحقق من الحساب." }, 500);
+        console.error("SESSION ERROR:", error);
+        return json(
+          { error: "تعذر التحقق من الحساب." },
+          500
+        );
       }
     }
 
     // Logout
-    if (url.pathname === "/api/auth/logout" && request.method === "POST") {
-      if (!db) return json({ error: "قاعدة البيانات غير مربوطة." }, 500);
+    if (
+      url.pathname === "/api/auth/logout" &&
+      request.method === "POST"
+    ) {
+      if (!db) {
+        return json({ error: "قاعدة البيانات غير مربوطة." }, 500);
+      }
 
-      if (request.headers.get("Origin") &&
-          request.headers.get("Origin") !== url.origin) {
+      if (
+        request.headers.get("Origin") &&
+        request.headers.get("Origin") !== url.origin
+      ) {
         return json({ error: "طلب غير مسموح." }, 403);
       }
 
@@ -222,6 +305,7 @@ export default {
 
         if (token) {
           const tokenHash = await hashToken(token);
+
           await db.prepare(
             "DELETE FROM sessions WHERE token_hash = ?"
           ).bind(tokenHash).run();
@@ -232,23 +316,37 @@ export default {
           200,
           { "Set-Cookie": clearCookie() }
         );
+
       } catch (error) {
-        return json({ error: "تعذر تسجيل الخروج." }, 500);
+        console.error("LOGOUT ERROR:", error);
+        return json(
+          { error: "تعذر تسجيل الخروج." },
+          500
+        );
       }
     }
 
     // Image generation
-    if (url.pathname === "/api/generate" && request.method === "POST") {
+    if (
+      url.pathname === "/api/generate" &&
+      request.method === "POST"
+    ) {
       try {
         if (!env.OPENAI_API_KEY) {
-          return json({ error: "مفتاح OpenAI غير مضبوط في Cloudflare." }, 500);
+          return json(
+            { error: "مفتاح OpenAI غير مضبوط في Cloudflare." },
+            500
+          );
         }
 
         const body = await request.json();
         const prompt = String(body.prompt || "").trim();
 
         if (!prompt || prompt.length > 32000) {
-          return json({ error: "اكتب وصفاً صحيحاً للصورة." }, 400);
+          return json(
+            { error: "اكتب وصفاً صحيحاً للصورة." },
+            400
+          );
         }
 
         const response = await fetch(
@@ -272,7 +370,9 @@ export default {
 
         if (!response.ok) {
           return json(
-            { error: result.error?.message || "تعذر إنشاء الصورة." },
+            {
+              error: result.error?.message || "تعذر إنشاء الصورة."
+            },
             response.status
           );
         }
@@ -280,12 +380,22 @@ export default {
         const image = result.data?.[0]?.b64_json;
 
         if (!image) {
-          return json({ error: "لم تصل الصورة من OpenAI." }, 502);
+          return json(
+            { error: "لم تصل الصورة من OpenAI." },
+            502
+          );
         }
 
-        return json({ image: `data:image/png;base64,${image}` });
+        return json({
+          image: `data:image/png;base64,${image}`
+        });
+
       } catch (error) {
-        return json({ error: "حدث خطأ في معالجة الطلب." }, 500);
+        console.error("IMAGE ERROR:", error);
+        return json(
+          { error: "حدث خطأ في معالجة الطلب." },
+          500
+        );
       }
     }
 
@@ -295,6 +405,7 @@ export default {
         url.pathname = "/index.html";
         return env.ASSETS.fetch(new Request(url, request));
       }
+
       return env.ASSETS.fetch(request);
     }
 
