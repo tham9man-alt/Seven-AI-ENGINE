@@ -331,8 +331,26 @@ export default {
       url.pathname === "/api/generate" &&
       request.method === "POST"
     ) {
+     
+      if (
+        request.headers.get("Origin") &&
+        request.headers.get("Origin") !== url.origin
+      ) {
+        return json({ error: "طلب غير مسموح." }, 403);
+      }
+
+      if (!db) {
+        return json({ error: "قاعدة البيانات غير مربوطة." }, 500);
+      }
+
       try {
+        const user = await getUser(request, db);
+        if (!user) {
+          return json({ error: "يجب تسجيل الدخول أولاً." }, 401);
+        }
+
         if (!env.OPENAI_API_KEY) {
+ 
           return json(
             { error: "مفتاح OpenAI غير مضبوط في Cloudflare." },
             500
