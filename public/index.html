@@ -1,391 +1,113 @@
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#090d18">
-<title>SEVEN AI ENGINE</title>
-
-<style>
-* { box-sizing: border-box; }
-
-body {
-  margin: 0;
-  min-height: 100vh;
-  font-family: Arial, sans-serif;
-  color: white;
-  background: radial-gradient(circle at top, #17264a, #090d18 65%);
-  display: flex;
-  justify-content: center;
-  padding: 25px 15px;
-}
-
-.container { width: 100%; max-width: 650px; }
-
-.header { text-align: center; padding: 30px 10px; }
-
-.logo {
-  font-size: 36px;
-  font-weight: 900;
-  letter-spacing: 2px;
-  color: #65caff;
-  text-shadow: 0 0 25px #168bff66;
-}
-
-.subtitle { color: #aab8d2; margin-top: 12px; }
-
-.panel {
-  background: #141d30;
-  border: 1px solid #293957;
-  border-radius: 20px;
-  padding: 22px;
-  margin-bottom: 18px;
-  box-shadow: 0 15px 50px #0005;
-}
-
-h2 { font-size: 21px; margin-top: 0; }
-
-input, textarea, select {
-  width: 100%;
-  background: #0b1323;
-  border: 1px solid #344765;
-  border-radius: 12px;
-  padding: 14px;
-  color: white;
-  font-size: 16px;
-  margin: 8px 0;
-  outline: none;
-}
-
-input:focus, textarea:focus { border-color: #45aaff; }
-
-textarea { min-height: 135px; resize: vertical; line-height: 1.7; }
-
-button {
-  width: 100%;
-  border: none;
-  padding: 15px;
-  border-radius: 12px;
-  background: linear-gradient(110deg,#087cf0,#36c7ff);
-  color: white;
-  font-size: 17px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-top: 9px;
-}
-
-button:disabled { opacity: .55; cursor: wait; }
-
-button.secondary { background: #263956; }
-
-button.danger { background: #783b4a; }
-
-.status {
-  text-align: center;
-  padding: 13px 5px;
-  color: #8dcfff;
-  line-height: 1.7;
-}
-
-.account-info {
-  color: #8dcfff;
-  text-align: center;
-  line-height: 1.8;
-  overflow-wrap: anywhere;
-}
-
-.hidden { display: none !important; }
-
-.result { margin-top: 22px; display: none; }
-
-.result img {
-  display: block;
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  object-fit: contain;
-  background: #080d18;
-  border-radius: 15px;
-  border: 1px solid #344765;
-}
-
-.download {
-  display: block;
-  text-decoration: none;
-  text-align: center;
-  margin-top: 14px;
-  padding: 14px;
-  color: white;
-  background: #167d55;
-  border-radius: 10px;
-}
-
-.footer {
-  text-align: center;
-  color: #72829e;
-  font-size: 12px;
-  padding: 25px 0;
-}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101426">
+  <meta name="description" content="SEVEN AI ENGINE - استوديو إنشاء الصور بالذكاء الاصطناعي">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/style.css?v=2">
+  <title>SEVEN AI ENGINE</title>
 </head>
-
 <body>
-<main class="container">
+  <main class="shell">
+    <header class="topbar">
+      <div class="mark">7</div>
+      <div>
+        <p class="eyebrow">استوديو الإبداع الذكي</p>
+        <h1>SEVEN <span>AI ENGINE</span></h1>
+      </div>
+      <div class="online"><i></i> مساحة العمل</div>
+    </header>
 
-<header class="header">
-  <div class="logo">SEVEN AI ENGINE</div>
-  <div class="subtitle">
-    محركك الإبداعي لتوليد الصور بالذكاء الاصطناعي
-  </div>
-</header>
+    <section class="hero">
+      <p class="eyebrow">مرحبًا بك في عالم الإبداع</p>
+      <h2>خيالك يبدأ من هنا.</h2>
+      <p class="intro">أنشئ حسابك وابدأ بتحويل أفكارك إلى صور.</p>
+    </section>
 
-<section class="panel" id="authPanel">
-  <h2>👤 حساب المستخدم</h2>
+    <section class="panel" id="auth-panel">
+      <div class="controls">
+        <button type="button" id="show-login" class="primary">تسجيل الدخول</button>
+        <button type="button" id="show-register" class="primary">إنشاء حساب</button>
+      </div>
 
-  <div id="authForms">
-    <div id="registerForm">
-      <h3>إنشاء حساب جديد</h3>
-      <input id="registerEmail" type="email"
-        placeholder="البريد الإلكتروني" autocomplete="email">
-      <input id="registerPassword" type="password"
-        placeholder="كلمة المرور (10 أحرف على الأقل)"
-        autocomplete="new-password">
-      <button id="registerButton">إنشاء حساب</button>
-    </div>
+      <form id="login-form">
+        <h3>مرحبًا بعودتك</h3>
+        <label for="login-email">البريد الإلكتروني</label>
+        <input id="login-email" type="email" autocomplete="email" required>
+        <label for="login-password">كلمة المرور</label>
+        <input id="login-password" type="password" autocomplete="current-password" required>
+        <button class="primary" type="submit">دخول إلى حسابي</button>
+      </form>
 
-    <div id="loginForm" style="margin-top:22px">
-      <h3>تسجيل الدخول</h3>
-      <input id="loginEmail" type="email"
-        placeholder="البريد الإلكتروني" autocomplete="username">
-      <input id="loginPassword" type="password"
-        placeholder="كلمة المرور" autocomplete="current-password">
-      <button id="loginButton" class="secondary">دخول</button>
-    </div>
-  </div>
+      <form id="register-form" hidden>
+        <h3>إنشاء حساب جديد</h3>
+        <label for="register-email">البريد الإلكتروني</label>
+        <input id="register-email" type="email" autocomplete="email" required>
+        <label for="register-password">كلمة المرور</label>
+        <input id="register-password" type="password" minlength="10" maxlength="128" autocomplete="new-password" required>
+        <p class="status">يجب أن تتكون كلمة المرور من 10 أحرف على الأقل.</p>
+        <button class="primary" type="submit">إنشاء الحساب</button>
+      </form>
 
-  <div id="userPanel" class="hidden">
-    <div class="account-info">
-      <p>✅ أنت مسجل الدخول</p>
-      <p id="userEmail"></p>
-    </div>
-    <button id="logoutButton" class="danger">تسجيل الخروج</button>
-  </div>
+      <p id="auth-status" class="status" aria-live="polite"></p>
+    </section>
 
-  <div class="status" id="authStatus" aria-live="polite"></div>
-</section>
+    <section class="panel" id="account-panel" hidden>
+      <h3>حسابك</h3>
+      <p id="account-email"></p>
+      <button type="button" id="logout" class="primary">تسجيل الخروج</button>
+    </section>
 
-<section class="panel">
-  <h2>✨ مساحة الإبداع</h2>
+    <section id="studio" hidden>
+      <section class="panel">
+        <label for="prompt">وصف الصورة</label>
+        <textarea id="prompt" rows="5" placeholder="اكتب وصف الصورة التي تريد إنشاءها..."></textarea>
 
-  <textarea id="prompt"
-    placeholder="اكتب وصف الصورة التي تريد إنشاءها..."></textarea>
+        <div class="controls">
+          <div class="field">
+            <label for="style">الأسلوب</label>
+            <select id="style">
+              <option value="واقعي سينمائي">واقعي سينمائي</option>
+              <option value="ثلاثي الأبعاد 3D">ثلاثي الأبعاد 3D</option>
+              <option value="أنمي">أنمي</option>
+              <option value="فن رقمي">فن رقمي</option>
+              <option value="تصميم تجريدي">تصميم تجريدي</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="ratio">الأبعاد</label>
+            <select id="ratio">
+              <option value="1024x1024">مربع 1:1</option>
+              <option value="1024x1536">عمودي</option>
+              <option value="1536x1024">أفقي</option>
+            </select>
+          </div>
+        </div>
 
-  <select id="size">
-    <option value="1024x1024">مربع 1:1</option>
-  </select>
+        <button id="generate" class="primary" type="button">✦ إنشاء الصورة</button>
+        <p id="status" class="status" aria-live="polite">جاهز لاستقبال فكرتك.</p>
+      </section>
 
-  <button id="generate">إنشاء الصورة</button>
+      <section class="result-section">
+        <div class="section-head">
+          <h3>منطقة النتيجة</h3>
+          <span>معاينة الصورة</span>
+        </div>
+        <div id="result" class="result">
+          <div class="placeholder">
+            <div class="spark">✧</div>
+            <p>ستظهر الصورة هنا بعد اكتمال الإنشاء</p>
+          </div>
+        </div>
+        <a id="download" class="download hidden" download="seven-ai-image.png">تنزيل الصورة</a>
+      </section>
+    </section>
 
-  <div class="status" id="status" aria-live="polite"></div>
-
-  <div class="result" id="result">
-    <h2>🎨 الصورة الناتجة</h2>
-    <img id="output" alt="الصورة الناتجة">
-    <a id="download" class="download" download="seven-ai-image.png">
-      تحميل الصورة
-    </a>
-  </div>
-</section>
-
-<footer class="footer">
-  SEVEN AI ENGINE © 2026
-  <br>جميع الحقوق محفوظة
-</footer>
-
-</main>
-
-<script>
-const $ = id => document.getElementById(id);
-
-const authStatus = $("authStatus");
-const authForms = $("authForms");
-const userPanel = $("userPanel");
-
-async function authRequest(path, body) {
-  const response = await fetch(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "same-origin",
-    body: JSON.stringify(body)
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.error || "تعذر تنفيذ الطلب.");
-  }
-
-  return data;
-}
-
-function showUser(user) {
-  authForms.classList.add("hidden");
-  userPanel.classList.remove("hidden");
-  $("userEmail").textContent = user.email;
-  authStatus.textContent = "";
-}
-
-function showForms() {
-  authForms.classList.remove("hidden");
-  userPanel.classList.add("hidden");
-}
-
-$("registerButton").addEventListener("click", async () => {
-  const email = $("registerEmail").value.trim();
-  const password = $("registerPassword").value;
-
-  if (!email || !password) {
-    authStatus.textContent = "أدخل البريد الإلكتروني وكلمة المرور.";
-    return;
-  }
-
-  $("registerButton").disabled = true;
-  authStatus.textContent = "جارٍ إنشاء الحساب...";
-
-  try {
-    const data = await authRequest("/api/auth/register", { email, password });
-    showUser(data.user);
-  } catch (error) {
-    authStatus.textContent = "❌ " + error.message;
-  } finally {
-    $("registerButton").disabled = false;
-  }
-});
-
-$("loginButton").addEventListener("click", async () => {
-  const email = $("loginEmail").value.trim();
-  const password = $("loginPassword").value;
-
-  if (!email || !password) {
-    authStatus.textContent = "أدخل بيانات تسجيل الدخول.";
-    return;
-  }
-
-  $("loginButton").disabled = true;
-  authStatus.textContent = "جارٍ تسجيل الدخول...";
-
-  try {
-    const data = await authRequest("/api/auth/login", { email, password });
-    showUser(data.user);
-  } catch (error) {
-    authStatus.textContent = "❌ " + error.message;
-  } finally {
-    $("loginButton").disabled = false;
-  }
-});
-
-$("logoutButton").addEventListener("click", async () => {
-  $("logoutButton").disabled = true;
-
-  try {
-    await authRequest("/api/auth/logout", {});
-    showForms();
-    authStatus.textContent = "تم تسجيل الخروج.";
-  } catch (error) {
-    authStatus.textContent = "❌ " + error.message;
-  } finally {
-    $("logoutButton").disabled = false;
-  }
-});
-
-async function checkSession() {
-  try {
-    const response = await fetch("/api/auth/me", {
-      credentials: "same-origin",
-      cache: "no-store"
-    });
-
-    const data = await response.json();
-
-    if (response.ok && data.authenticated && data.user) {
-      showUser(data.user);
-    }
-  } catch (error) {
-    authStatus.textContent = "تعذر التحقق من حالة الحساب.";
-  }
-}
-
-const promptInput = $("prompt");
-const generateButton = $("generate");
-const statusBox = $("status");
-const resultBox = $("result");
-const output = $("output");
-const download = $("download");
-
-generateButton.addEventListener("click", generateImage);
-
-async function generateImage() {
-  const prompt = promptInput.value.trim();
-  const size = $("size").value;
-
-  if (!prompt) {
-    statusBox.textContent = "⚠️ اكتب وصف الصورة أولاً.";
-    promptInput.focus();
-    return;
-  }
-
-  generateButton.disabled = true;
-  generateButton.textContent = "جارٍ إنشاء الصورة...";
-  statusBox.textContent = "⏳ جارٍ الاتصال بالمحرك...";
-  resultBox.style.display = "none";
-
-  try {
-    const response = await fetch("/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, size })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || "حدث خطأ أثناء الاتصال بالمحرك.");
-    }
-
-    let imageUrl = data.image_url || data.url || data.image;
-
-    if (!imageUrl && data.b64_json) {
-      imageUrl = "data:image/png;base64," + data.b64_json;
-    }
-
-    if (!imageUrl && data.data && data.data[0]) {
-      const item = data.data[0];
-      if (item.b64_json) {
-        imageUrl = "data:image/png;base64," + item.b64_json;
-      } else if (item.url) {
-        imageUrl = item.url;
-      }
-    }
-
-    if (!imageUrl) {
-      throw new Error("لم تصل الصورة من الخادم.");
-    }
-
-    output.src = imageUrl;
-    download.href = imageUrl;
-    resultBox.style.display = "block";
-    statusBox.textContent = "✅ تم إنشاء الصورة بنجاح!";
-    resultBox.scrollIntoView({ behavior: "smooth" });
-
-  } catch (error) {
-    statusBox.textContent = "❌ " + error.message;
-  } finally {
-    generateButton.disabled = false;
-    generateButton.textContent = "إنشاء الصورة";
-  }
-}
-
-checkSession();
-</script>
+    <footer>SEVEN AI ENGINE <span>•</span> إصدار تجريبي</footer>
+  </main>
+  <script src="/app.js"></script>
 </body>
 </html>
