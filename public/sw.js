@@ -1,4 +1,4 @@
-const CACHE_NAME = "seven-ai-engine-v1";
+const CACHE_NAME = "seven-ai-engine-v2";
 
 const FILES = [
   "/",
