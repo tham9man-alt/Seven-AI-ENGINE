@@ -1,0 +1,40 @@
+name: Validate SEVEN AI ENGINE
+
+on:
+  push:
+    branches:
+      - password-recovery
+  pull_request:
+    branches:
+      - password-recovery
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check JavaScript syntax
+        run: |
+          node --check worker.js
+          node --check public/app.js
+          node --check public/reset-password.js
+      - name: Validate D1 migrations
+        run: |
+          python - <<'PY'
+          import sqlite3
+          from pathlib import Path
+          db = sqlite3.connect(":memory:")
+          for path in sorted(Path("migrations").glob("*.sql")):
+              db.executescript(path.read_text(encoding="utf-8"))
+              print(f"OK: {path}")
+          PY
+      - name: Wrangler dry run (no deployment)
+        run: npm run check
