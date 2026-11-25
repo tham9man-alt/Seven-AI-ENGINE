@@ -129,6 +129,7 @@ export default {
       if (!originAllowed(request, url)) return json({ error: "طلب غير مسموح." }, 403);
 
       const genericMessage = "إذا كان البريد مسجلًا لدينا، فستصلك رسالة تحتوي على رابط إعادة تعيين كلمة المرور.";
+      let pendingTokenHash = null;
       try {
         const body = await readJson(request);
         if (!body) return json({ success: true, message: genericMessage });
@@ -158,9 +159,12 @@ export default {
         await db.prepare(
           "INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, ?)"
         ).bind(tokenHash, user.id, expires).run();
+        pendingTokenHash = tokenHash;
 
         if (!env.RESEND_API_KEY) {
           console.error("PASSWORD RESET EMAIL ERROR: RESEND_API_KEY is missing");
+          await db.prepare("DELETE FROM password_resets WHERE token_hash = ?").bind(pendingTokenHash).run();
+          pendingTokenHash = null;
           return json({ success: true, message: genericMessage });
         }
 
@@ -184,9 +188,18 @@ export default {
         if (!emailResponse.ok) {
           const detail = await emailResponse.text().catch(() => "");
           console.error("PASSWORD RESET EMAIL ERROR:", emailResponse.status, detail.slice(0, 500));
+          await db.prepare("DELETE FROM password_resets WHERE token_hash = ?").bind(pendingTokenHash).run();
         }
+        pendingTokenHash = null;
         return json({ success: true, message: genericMessage });
       } catch (error) {
+        if (pendingTokenHash) {
+          try {
+            await db.prepare("DELETE FROM password_resets WHERE token_hash = ?").bind(pendingTokenHash).run();
+          } catch (cleanupError) {
+            console.error("PASSWORD RESET TOKEN CLEANUP ERROR:", cleanupError);
+          }
+        }
         console.error("FORGOT PASSWORD ERROR:", error);
         return json({ success: true, message: genericMessage });
       }
