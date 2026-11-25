@@ -163,7 +163,7 @@ export default {
 
         if (!env.RESEND_API_KEY) {
           console.error("PASSWORD RESET EMAIL ERROR: RESEND_API_KEY is missing");
-          await db.prepare("DELETE FROM password_resets WHERE token_hash = ?").bind(pendingTokenHash).run();
+          await db.prepare("UPDATE password_resets SET expires_at = ? WHERE token_hash = ?").bind(new Date().toISOString(), pendingTokenHash).run();
           pendingTokenHash = null;
           return json({ success: true, message: genericMessage });
         }
@@ -188,14 +188,14 @@ export default {
         if (!emailResponse.ok) {
           const detail = await emailResponse.text().catch(() => "");
           console.error("PASSWORD RESET EMAIL ERROR:", emailResponse.status, detail.slice(0, 500));
-          await db.prepare("DELETE FROM password_resets WHERE token_hash = ?").bind(pendingTokenHash).run();
+          await db.prepare("UPDATE password_resets SET expires_at = ? WHERE token_hash = ?").bind(new Date().toISOString(), pendingTokenHash).run();
         }
         pendingTokenHash = null;
         return json({ success: true, message: genericMessage });
       } catch (error) {
         if (pendingTokenHash) {
           try {
-            await db.prepare("DELETE FROM password_resets WHERE token_hash = ?").bind(pendingTokenHash).run();
+            await db.prepare("UPDATE password_resets SET expires_at = ? WHERE token_hash = ?").bind(new Date().toISOString(), pendingTokenHash).run();
           } catch (cleanupError) {
             console.error("PASSWORD RESET TOKEN CLEANUP ERROR:", cleanupError);
           }
@@ -225,23 +225,26 @@ export default {
 
         const tokenHash = await hashToken(token);
         const now = new Date().toISOString();
-        const reset = await db.prepare(
-          "SELECT user_id FROM password_resets WHERE token_hash = ? AND expires_at > ?"
-        ).bind(tokenHash, now).first();
-
-        if (!reset) {
-          return json({ error: "رابط إعادة التعيين غير صالح أو منتهي الصلاحية." }, 400);
-        }
-
         const salt = hex(randomBytes(16));
         const passwordHash = await hashPassword(password, salt, 120000);
-        await db.batch([
+
+        // Consume the token and update the account in one atomic D1 batch.
+        // A concurrent/replayed request cannot reuse a token after the first batch commits.
+        const results = await db.batch([
           db.prepare(
-            "UPDATE users SET password_hash = ?, password_salt = ? WHERE id = ?"
-          ).bind(passwordHash, salt, reset.user_id),
-          db.prepare("DELETE FROM sessions WHERE user_id = ?").bind(reset.user_id),
-          db.prepare("DELETE FROM password_resets WHERE user_id = ?").bind(reset.user_id)
+            "UPDATE users SET password_hash = ?, password_salt = ? WHERE id = (SELECT user_id FROM password_resets WHERE token_hash = ? AND expires_at > ?)"
+          ).bind(passwordHash, salt, tokenHash, now),
+          db.prepare(
+            "DELETE FROM sessions WHERE user_id = (SELECT user_id FROM password_resets WHERE token_hash = ?)"
+          ).bind(tokenHash),
+          db.prepare(
+            "DELETE FROM password_resets WHERE user_id = (SELECT user_id FROM password_resets WHERE token_hash = ?)"
+          ).bind(tokenHash)
         ]);
+
+        if (Number(results?.[0]?.meta?.changes || 0) !== 1) {
+          return json({ error: "رابط إعادة التعيين غير صالح أو منتهي الصلاحية." }, 400);
+        }
 
         return json({ success: true, message: "تم تغيير كلمة المرور. يمكنك تسجيل الدخول الآن." });
       } catch (error) {
