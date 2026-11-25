@@ -1,11 +1,13 @@
-const CACHE_NAME = "seven-ai-engine-v2";
+const CACHE_NAME = "seven-ai-engine-v3";
 
 const FILES = [
   "/",
   "/index.html",
   "/style.css",
   "/app.js",
-  "/manifest.webmanifest"
+  "/manifest.webmanifest",
+  "/reset-password.html",
+  "/reset-password.js"
 ];
 
 self.addEventListener("install", event => {
