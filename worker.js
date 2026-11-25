@@ -117,7 +117,7 @@ function originAllowed(request, url) {
   const origin = request.headers.get("Origin");
   if (origin) return origin === url.origin;
   const fetchSite = request.headers.get("Sec-Fetch-Site");
-  return !fetchSite || fetchSite === "same-origin" || fetchSite === "none";
+  return fetchSite === "same-origin" || fetchSite === "none";
 }
 
 async function checkRateLimit(request, db, scope, limit, windowSeconds) {
@@ -141,11 +141,12 @@ async function checkRateLimit(request, db, scope, limit, windowSeconds) {
 
 async function refundCredit(db, userId, reason = "generation_failed") {
   const id = crypto.randomUUID();
-  await db.prepare("UPDATE users SET credits = credits + 1 WHERE id = ?").bind(userId).run();
-  const user = await db.prepare("SELECT credits FROM users WHERE id = ?").bind(userId).first();
-  await db.prepare(
-    "INSERT INTO credit_transactions (id, user_id, amount, balance_after, reason) VALUES (?, ?, 1, ?, ?)"
-  ).bind(id, userId, Number(user?.credits || 0), reason).run();
+  await db.batch([
+    db.prepare("UPDATE users SET credits = credits + 1 WHERE id = ?").bind(userId),
+    db.prepare(
+      "INSERT INTO credit_transactions (id, user_id, amount, balance_after, reason) SELECT ?, id, 1, credits, ? FROM users WHERE id = ?"
+    ).bind(id, reason, userId)
+  ]);
 }
 
 export default {
@@ -510,8 +511,8 @@ export default {
             charged = false;
             return json({ error: "لم تصل الصورة. تمت إعادة الرصيد." }, 502);
           }
-          charged = false;
           const finalBalance = await db.prepare("SELECT credits FROM users WHERE id = ?").bind(user.id).first();
+          charged = false;
           return json({ image: `data:image/png;base64,${image}`, credits: Number(finalBalance?.credits || 0) });
         } catch (generationError) {
           if (charged) {
