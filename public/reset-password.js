@@ -17,6 +17,7 @@ document.querySelectorAll(".toggle-password").forEach((toggle) => {
 if (!token) {
   resetForm.hidden = true;
   statusEl.textContent = "رابط إعادة التعيين غير صالح. اطلب رابطًا جديدًا من صفحة تسجيل الدخول.";
+  loginLink.hidden = false;
 }
 
 resetForm.addEventListener("submit", async (event) => {
