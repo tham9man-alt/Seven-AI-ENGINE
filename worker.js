@@ -123,6 +123,120 @@ export default {
     const url = new URL(request.url);
     const db = env.DB;
 
+    // Request a password reset. Always return a generic response to avoid account enumeration.
+    if (url.pathname === "/api/auth/forgot-password" && request.method === "POST") {
+      if (!db) return json({ error: "تعذر معالجة الطلب حاليًا." }, 500);
+      if (!originAllowed(request, url)) return json({ error: "طلب غير مسموح." }, 403);
+
+      const genericMessage = "إذا كان البريد مسجلًا لدينا، فستصلك رسالة تحتوي على رابط إعادة تعيين كلمة المرور.";
+      try {
+        const body = await readJson(request);
+        if (!body) return json({ success: true, message: genericMessage });
+
+        const email = String(body.email || "").trim().toLowerCase();
+        if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 254) {
+          return json({ success: true, message: genericMessage });
+        }
+
+        const user = await db.prepare("SELECT id, email FROM users WHERE email = ?")
+          .bind(email).first();
+        if (!user) return json({ success: true, message: genericMessage });
+
+        const now = new Date().toISOString();
+        await db.prepare("DELETE FROM password_resets WHERE expires_at <= ?").bind(now).run();
+
+        const recent = await db.prepare(
+          "SELECT COUNT(*) AS total FROM password_resets WHERE user_id = ? AND created_at > datetime('now', '-15 minutes')"
+        ).bind(user.id).first();
+        if (Number(recent?.total || 0) >= 3) {
+          return json({ success: true, message: genericMessage });
+        }
+
+        const token = base64url(randomBytes(32));
+        const tokenHash = await hashToken(token);
+        const expires = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+        await db.prepare(
+          "INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, ?)"
+        ).bind(tokenHash, user.id, expires).run();
+
+        if (!env.RESEND_API_KEY) {
+          console.error("PASSWORD RESET EMAIL ERROR: RESEND_API_KEY is missing");
+          return json({ success: true, message: genericMessage });
+        }
+
+        const resetUrl = new URL("/reset-password.html", url.origin);
+        resetUrl.searchParams.set("token", token);
+        const emailResponse = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${env.RESEND_API_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            from: "SEVEN AI ENGINE <onboarding@resend.dev>",
+            to: [user.email],
+            subject: "إعادة تعيين كلمة المرور - SEVEN AI ENGINE",
+            text: `تلقينا طلبًا لإعادة تعيين كلمة المرور لحسابك. افتح الرابط التالي خلال 30 دقيقة:\\n\\n${resetUrl.toString()}\\n\\nإذا لم تطلب ذلك، فتجاهل هذه الرسالة.`,
+            html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.9;color:#222"><h2>إعادة تعيين كلمة المرور</h2><p>تلقينا طلبًا لإعادة تعيين كلمة المرور لحسابك في SEVEN AI ENGINE.</p><p><a href="${resetUrl.toString()}" style="display:inline-block;padding:12px 22px;background:#d71932;color:#fff;text-decoration:none;border-radius:8px">تعيين كلمة مرور جديدة</a></p><p>الرابط صالح لمدة 30 دقيقة ويُستخدم مرة واحدة.</p><p>إذا لم تطلب إعادة التعيين، فتجاهل هذه الرسالة.</p></div>`
+          })
+        });
+
+        if (!emailResponse.ok) {
+          const detail = await emailResponse.text().catch(() => "");
+          console.error("PASSWORD RESET EMAIL ERROR:", emailResponse.status, detail.slice(0, 500));
+        }
+        return json({ success: true, message: genericMessage });
+      } catch (error) {
+        console.error("FORGOT PASSWORD ERROR:", error);
+        return json({ success: true, message: genericMessage });
+      }
+    }
+
+    // Complete a password reset with a single-use, time-limited token.
+    if (url.pathname === "/api/auth/reset-password" && request.method === "POST") {
+      if (!db) return json({ error: "قاعدة البيانات غير مربوطة." }, 500);
+      if (!originAllowed(request, url)) return json({ error: "طلب غير مسموح." }, 403);
+
+      try {
+        const body = await readJson(request);
+        if (!body) return json({ error: "بيانات الطلب غير صحيحة." }, 400);
+
+        const token = String(body.token || "");
+        const password = String(body.password || "");
+        if (token.length < 20 || token.length > 200) {
+          return json({ error: "رابط إعادة التعيين غير صالح أو منتهي الصلاحية." }, 400);
+        }
+        if (password.length < 10 || password.length > 128) {
+          return json({ error: "كلمة المرور يجب أن تكون بين 10 و128 حرفًا." }, 400);
+        }
+
+        const tokenHash = await hashToken(token);
+        const now = new Date().toISOString();
+        const reset = await db.prepare(
+          "SELECT user_id FROM password_resets WHERE token_hash = ? AND expires_at > ?"
+        ).bind(tokenHash, now).first();
+
+        if (!reset) {
+          return json({ error: "رابط إعادة التعيين غير صالح أو منتهي الصلاحية." }, 400);
+        }
+
+        const salt = hex(randomBytes(16));
+        const passwordHash = await hashPassword(password, salt, 120000);
+        await db.batch([
+          db.prepare(
+            "UPDATE users SET password_hash = ?, password_salt = ? WHERE id = ?"
+          ).bind(passwordHash, salt, reset.user_id),
+          db.prepare("DELETE FROM sessions WHERE user_id = ?").bind(reset.user_id),
+          db.prepare("DELETE FROM password_resets WHERE user_id = ?").bind(reset.user_id)
+        ]);
+
+        return json({ success: true, message: "تم تغيير كلمة المرور. يمكنك تسجيل الدخول الآن." });
+      } catch (error) {
+        console.error("RESET PASSWORD ERROR:", error);
+        return json({ error: "تعذر تغيير كلمة المرور حاليًا." }, 500);
+      }
+    }
+
     // Registration
     if (url.pathname === "/api/auth/register" && request.method === "POST") {
       console.log("REGISTER REQUEST RECEIVED");
