@@ -1,7 +1,6 @@
-
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "seven-ai-engine",
+  "name": "seven-ai-engine-test",
   "main": "./worker.js",
   "compatibility_date": "2026-11-20",
   "assets": {
@@ -11,8 +10,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "sevenaiusers",
-      "database_id": "ce4c7c11-c430-49b4-ba24-28ae262aaaa1"
+      "database_name": "sevenaiusers-test",
+      "database_id": "1e148483-f6be-4a53-b2ec-5bb60be8d03b"
     }
   ]
 }
