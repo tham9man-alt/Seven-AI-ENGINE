@@ -10,6 +10,7 @@ const forgotForm = document.querySelector("#forgot-form");
 
 const showLogin = document.querySelector("#show-login");
 const showRegister = document.querySelector("#show-register");
+const authLinkRow = document.querySelector("#auth-link-row");
 
 function showAuth() {
   authPanel.hidden = false;
@@ -28,6 +29,7 @@ showLogin.addEventListener("click", () => {
   loginForm.hidden = false;
   registerForm.hidden = true;
   forgotForm.hidden = true;
+  authLinkRow.hidden = false;
   authStatus.textContent = "";
 });
 
@@ -36,6 +38,7 @@ document.querySelector("#show-forgot").addEventListener("click", (event) => {
   loginForm.hidden = true;
   registerForm.hidden = true;
   forgotForm.hidden = false;
+  authLinkRow.hidden = true;
   authStatus.textContent = "";
 });
 
@@ -43,6 +46,7 @@ document.querySelector("#back-to-login").addEventListener("click", () => {
   loginForm.hidden = false;
   registerForm.hidden = true;
   forgotForm.hidden = true;
+  authLinkRow.hidden = false;
   authStatus.textContent = "";
 });
 
@@ -50,6 +54,7 @@ showRegister.addEventListener("click", () => {
   loginForm.hidden = true;
   registerForm.hidden = false;
   forgotForm.hidden = true;
+  authLinkRow.hidden = false;
   authStatus.textContent = "";
 });
 
