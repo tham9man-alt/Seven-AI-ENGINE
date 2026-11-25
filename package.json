@@ -1,9 +1,13 @@
 {
   "name": "seven-ai-engine",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "SEVEN AI ENGINE - Arabic PWA starter",
-  "scripts": {"start": "node server.js"},
-  "dependencies": {"express": "^4.21.2"},
-  "engines": {"node": ">=18"}
+  "description": "SEVEN AI ENGINE - Cloudflare Workers image studio",
+  "scripts": {
+    "dev": "npx wrangler dev --config wrangler.jsonc",
+    "check": "npx wrangler deploy --dry-run --config wrangler.jsonc"
+  },
+  "engines": {
+    "node": ">=18"
+  }
 }
