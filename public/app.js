@@ -6,6 +6,7 @@ const authStatus = document.querySelector("#auth-status");
 
 const loginForm = document.querySelector("#login-form");
 const registerForm = document.querySelector("#register-form");
+const forgotForm = document.querySelector("#forgot-form");
 
 const showLogin = document.querySelector("#show-login");
 const showRegister = document.querySelector("#show-register");
@@ -26,13 +27,63 @@ function showAccount(user) {
 showLogin.addEventListener("click", () => {
   loginForm.hidden = false;
   registerForm.hidden = true;
+  forgotForm.hidden = true;
+  authStatus.textContent = "";
+});
+
+document.querySelector("#show-forgot").addEventListener("click", (event) => {
+  event.preventDefault();
+  loginForm.hidden = true;
+  registerForm.hidden = true;
+  forgotForm.hidden = false;
+  authStatus.textContent = "";
+});
+
+document.querySelector("#back-to-login").addEventListener("click", () => {
+  loginForm.hidden = false;
+  registerForm.hidden = true;
+  forgotForm.hidden = true;
   authStatus.textContent = "";
 });
 
 showRegister.addEventListener("click", () => {
   loginForm.hidden = true;
   registerForm.hidden = false;
+  forgotForm.hidden = true;
   authStatus.textContent = "";
+});
+
+// Accessible show/hide controls for password fields.
+document.querySelectorAll(".toggle-password").forEach((toggle) => {
+  toggle.addEventListener("click", () => {
+    const input = document.getElementById(toggle.dataset.target);
+    if (!input) return;
+    const reveal = input.type === "password";
+    input.type = reveal ? "text" : "password";
+    toggle.textContent = reveal ? "إخفاء" : "إظهار";
+    toggle.setAttribute("aria-label", reveal ? "إخفاء كلمة المرور" : "إظهار كلمة المرور");
+  });
+});
+
+forgotForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  authStatus.textContent = "جارٍ إرسال طلب الاستعادة...";
+  const email = document.querySelector("#forgot-email").value.trim();
+
+  try {
+    const response = await fetch("/api/auth/forgot-password", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "تعذر إرسال الطلب.");
+    forgotForm.reset();
+    authStatus.textContent = data.message || "إذا كان البريد مسجلًا لدينا، فستصلك رسالة استعادة.";
+  } catch (error) {
+    authStatus.textContent = error.message;
+  }
 });
 
 async function checkSession() {
@@ -124,6 +175,7 @@ document.querySelector("#logout").addEventListener("click", async () => {
     showAuth();
     loginForm.reset();
     registerForm.reset();
+    forgotForm.reset();
     authStatus.textContent = "تم تسجيل الخروج.";
   } catch (error) {
     authStatus.textContent = error.message;
