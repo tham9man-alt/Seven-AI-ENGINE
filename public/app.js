@@ -18,11 +18,18 @@ function showAuth() {
   studio.hidden = true;
 }
 
+function updateCreditBalance(value) {
+  if (Number.isInteger(Number(value)) && Number(value) >= 0) {
+    document.querySelector("#credit-balance").textContent = `الرصيد المتبقي: ${Number(value)} نقطة`;
+  }
+}
+
 function showAccount(user) {
   authPanel.hidden = true;
   accountPanel.hidden = false;
   studio.hidden = false;
   document.querySelector("#account-email").textContent = user.email;
+  updateCreditBalance(user.credits);
 }
 
 showLogin.addEventListener("click", () => {
@@ -230,6 +237,7 @@ button.addEventListener("click", async () => {
     }
 
     if (!response.ok) {
+      if (data.credits !== undefined) updateCreditBalance(data.credits);
       throw new Error(data.error || "تعذر إنشاء الصورة.");
     }
 
@@ -246,6 +254,7 @@ button.addEventListener("click", async () => {
 
     downloadEl.href = data.image;
     downloadEl.classList.remove("hidden");
+    updateCreditBalance(data.credits);
     statusEl.textContent = "اكتمل الإنشاء بنجاح.";
   } catch (error) {
     statusEl.textContent = error.message;
