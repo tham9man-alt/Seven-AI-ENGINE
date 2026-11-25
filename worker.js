@@ -134,7 +134,7 @@ export default {
         if (!body) return json({ success: true, message: genericMessage });
 
         const email = String(body.email || "").trim().toLowerCase();
-        if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 254) {
+        if (!/^[^\s@]+@[^\s@]+\\.[^\s@]+$/.test(email) || email.length > 254) {
           return json({ success: true, message: genericMessage });
         }
 
@@ -176,7 +176,7 @@ export default {
             from: "SEVEN AI ENGINE <onboarding@resend.dev>",
             to: [user.email],
             subject: "إعادة تعيين كلمة المرور - SEVEN AI ENGINE",
-            text: `تلقينا طلبًا لإعادة تعيين كلمة المرور لحسابك. افتح الرابط التالي خلال 30 دقيقة:\\n\\n${resetUrl.toString()}\\n\\nإذا لم تطلب ذلك، فتجاهل هذه الرسالة.`,
+            text: `تلقينا طلبًا لإعادة تعيين كلمة المرور لحسابك. افتح الرابط التالي خلال 30 دقيقة:\n\n${resetUrl.toString()}\n\nإذا لم تطلب ذلك، فتجاهل هذه الرسالة.`,
             html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.9;color:#222"><h2>إعادة تعيين كلمة المرور</h2><p>تلقينا طلبًا لإعادة تعيين كلمة المرور لحسابك في SEVEN AI ENGINE.</p><p><a href="${resetUrl.toString()}" style="display:inline-block;padding:12px 22px;background:#d71932;color:#fff;text-decoration:none;border-radius:8px">تعيين كلمة مرور جديدة</a></p><p>الرابط صالح لمدة 30 دقيقة ويُستخدم مرة واحدة.</p><p>إذا لم تطلب إعادة التعيين، فتجاهل هذه الرسالة.</p></div>`
           })
         });
