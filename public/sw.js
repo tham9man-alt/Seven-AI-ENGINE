@@ -1,10 +1,10 @@
-const CACHE_NAME = "seven-ai-engine-v4";
+const CACHE_NAME = "seven-ai-engine-v5";
 
 const FILES = [
   "/",
   "/index.html",
-  "/style.css?v=4",
-  "/app.js?v=4",
+  "/style.css?v=5",
+  "/app.js?v=5",
   "/manifest.webmanifest",
   "/reset-password.html",
   "/reset-password.js?v=2"
