@@ -225,6 +225,15 @@ export default {
 
         const tokenHash = await hashToken(token);
         const now = new Date().toISOString();
+        const validReset = await db.prepare(
+          "SELECT user_id FROM password_resets WHERE token_hash = ? AND expires_at > ?"
+        ).bind(tokenHash, now).first();
+        if (!validReset) {
+          return json({ error: "رابط إعادة التعيين غير صالح أو منتهي الصلاحية." }, 400);
+        }
+
+        // Reject invalid/expired tokens before performing the expensive password derivation.
+        // The token is still re-validated and consumed atomically in the batch below.
         const salt = hex(randomBytes(16));
         const passwordHash = await hashPassword(password, salt, 120000);
 
