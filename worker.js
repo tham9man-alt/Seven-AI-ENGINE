@@ -36,7 +36,7 @@ async function hashToken(token) {
   return hex(new Uint8Array(digest));
 }
 
-async function hashPassword(password, salt, iterations = 120000) {
+async function hashPassword(password, salt, iterations = 100000) {
   const key = await crypto.subtle.importKey(
     "raw",
     encoder.encode(password),
@@ -235,7 +235,7 @@ export default {
         // Reject invalid/expired tokens before performing the expensive password derivation.
         // The token is still re-validated and consumed atomically in the batch below.
         const salt = hex(randomBytes(16));
-        const passwordHash = await hashPassword(password, salt, 120000);
+        const passwordHash = await hashPassword(password, salt, 100000);
 
         // Consume the token and update the account in one atomic D1 batch.
         // A concurrent/replayed request cannot reuse a token after the first batch commits.
@@ -287,7 +287,7 @@ export default {
 
         const id = crypto.randomUUID();
         const salt = hex(randomBytes(16));
-        const passwordHash = await hashPassword(password, salt, 120000);
+        const passwordHash = await hashPassword(password, salt, 100000);
         const session = await makeSession(id);
 
         // D1 batch runs these statements transactionally.
@@ -336,25 +336,19 @@ export default {
 
         if (!user) return json({ error: "البريد أو كلمة المرور غير صحيحة." }, 401);
 
-        let usedIterations = 120000;
-        let passwordHash = await hashPassword(password, user.password_salt, usedIterations);
+        let passwordHash = await hashPassword(password, user.password_salt, 100000);
 
         if (!constantTimeEqual(passwordHash, user.password_hash)) {
-          usedIterations = 100000;
-          passwordHash = await hashPassword(password, user.password_salt, usedIterations);
+          // Retain compatibility with 120k hashes only on runtimes that support them.
+          try {
+            passwordHash = await hashPassword(password, user.password_salt, 120000);
+          } catch (error) {
+            if (error?.name !== "NotSupportedError") throw error;
+          }
         }
 
         if (!constantTimeEqual(passwordHash, user.password_hash)) {
           return json({ error: "البريد أو كلمة المرور غير صحيحة." }, 401);
-        }
-
-        // Upgrade verified legacy 100k passwords to the current 120k setting.
-        if (usedIterations === 100000) {
-          const newSalt = hex(randomBytes(16));
-          const newHash = await hashPassword(password, newSalt, 120000);
-          await db.prepare(
-            "UPDATE users SET password_hash = ?, password_salt = ? WHERE id = ?"
-          ).bind(newHash, newSalt, user.id).run();
         }
 
         const token = await createSession(db, user.id);
