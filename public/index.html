@@ -38,8 +38,22 @@
         <label for="login-email">البريد الإلكتروني</label>
         <input id="login-email" type="email" autocomplete="email" required>
         <label for="login-password">كلمة المرور</label>
-        <input id="login-password" type="password" autocomplete="current-password" required>
+        <div class="password-wrap">
+          <input id="login-password" type="password" autocomplete="current-password" required>
+          <button type="button" class="toggle-password" data-target="login-password" aria-label="إظهار كلمة المرور">إظهار</button>
+        </div>
         <button class="primary" type="submit">دخول إلى حسابي</button>
+      </form>
+
+      <p class="auth-link-row"><a href="#" id="show-forgot">نسيت كلمة المرور؟</a></p>
+
+      <form id="forgot-form" hidden>
+        <h3>استعادة الحساب</h3>
+        <p class="form-help">أدخل بريدك الإلكتروني وسنرسل لك رابطًا آمنًا لإعادة تعيين كلمة المرور.</p>
+        <label for="forgot-email">البريد الإلكتروني</label>
+        <input id="forgot-email" type="email" autocomplete="email" required>
+        <button class="primary" type="submit">إرسال رابط الاستعادة</button>
+        <button class="secondary" type="button" id="back-to-login">العودة لتسجيل الدخول</button>
       </form>
 
       <form id="register-form" hidden>
@@ -47,7 +61,10 @@
         <label for="register-email">البريد الإلكتروني</label>
         <input id="register-email" type="email" autocomplete="email" required>
         <label for="register-password">كلمة المرور</label>
-        <input id="register-password" type="password" minlength="10" maxlength="128" autocomplete="new-password" required>
+        <div class="password-wrap">
+          <input id="register-password" type="password" minlength="10" maxlength="128" autocomplete="new-password" required>
+          <button type="button" class="toggle-password" data-target="register-password" aria-label="إظهار كلمة المرور">إظهار</button>
+        </div>
         <p class="status">يجب أن تتكون كلمة المرور من 10 أحرف على الأقل.</p>
         <button class="primary" type="submit">إنشاء الحساب</button>
       </form>
