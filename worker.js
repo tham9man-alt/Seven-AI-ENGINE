@@ -134,7 +134,7 @@ export default {
         if (!body) return json({ success: true, message: genericMessage });
 
         const email = String(body.email || "").trim().toLowerCase();
-        if (!/^[^\s@]+@[^\s@]+\\.[^\s@]+$/.test(email) || email.length > 254) {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
           return json({ success: true, message: genericMessage });
         }
 
