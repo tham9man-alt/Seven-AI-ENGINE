@@ -110,12 +110,42 @@ async function getUser(request, db) {
   ).bind(tokenHash, new Date().toISOString()).first();
 
   if (!session) return null;
-  return db.prepare("SELECT id, email FROM users WHERE id = ?").bind(session.user_id).first();
+  return db.prepare("SELECT id, email, credits FROM users WHERE id = ?").bind(session.user_id).first();
 }
 
 function originAllowed(request, url) {
   const origin = request.headers.get("Origin");
-  return !origin || origin === url.origin;
+  if (origin) return origin === url.origin;
+  const fetchSite = request.headers.get("Sec-Fetch-Site");
+  return !fetchSite || fetchSite === "same-origin" || fetchSite === "none";
+}
+
+async function checkRateLimit(request, db, scope, limit, windowSeconds) {
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const keyHash = await hashToken(`${scope}:${ip}`);
+  const now = Math.floor(Date.now() / 1000);
+  const result = await db.prepare(
+    `INSERT INTO auth_rate_limits (key_hash, window_started_at, count)
+     VALUES (?, ?, 1)
+     ON CONFLICT(key_hash) DO UPDATE SET
+       count = CASE WHEN window_started_at + ? <= ? THEN 1 ELSE count + 1 END,
+       window_started_at = CASE WHEN window_started_at + ? <= ? THEN ? ELSE window_started_at END
+     RETURNING count`
+  ).bind(keyHash, now, windowSeconds, now, windowSeconds, now, now).first();
+  if (now % 97 === 0) {
+    await db.prepare("DELETE FROM auth_rate_limits WHERE window_started_at < ?")
+      .bind(now - 86400).run();
+  }
+  return Number(result?.count || 0) <= limit;
+}
+
+async function refundCredit(db, userId, reason = "generation_failed") {
+  const id = crypto.randomUUID();
+  await db.prepare("UPDATE users SET credits = credits + 1 WHERE id = ?").bind(userId).run();
+  const user = await db.prepare("SELECT credits FROM users WHERE id = ?").bind(userId).first();
+  await db.prepare(
+    "INSERT INTO credit_transactions (id, user_id, amount, balance_after, reason) VALUES (?, ?, 1, ?, ?)"
+  ).bind(id, userId, Number(user?.credits || 0), reason).run();
 }
 
 export default {
@@ -127,6 +157,9 @@ export default {
     if (url.pathname === "/api/auth/forgot-password" && request.method === "POST") {
       if (!db) return json({ error: "تعذر معالجة الطلب حاليًا." }, 500);
       if (!originAllowed(request, url)) return json({ error: "طلب غير مسموح." }, 403);
+      if (!(await checkRateLimit(request, db, "forgot", 8, 900))) {
+        return json({ success: true, message: "إذا كان البريد مسجلًا لدينا، فستصلك رسالة تحتوي على رابط إعادة تعيين كلمة المرور." });
+      }
 
       const genericMessage = "إذا كان البريد مسجلًا لدينا، فستصلك رسالة تحتوي على رابط إعادة تعيين كلمة المرور.";
       let pendingTokenHash = null;
@@ -267,6 +300,9 @@ export default {
       console.log("REGISTER REQUEST RECEIVED");
       if (!db) return json({ error: "قاعدة البيانات غير مربوطة." }, 500);
       if (!originAllowed(request, url)) return json({ error: "طلب غير مسموح." }, 403);
+      if (!(await checkRateLimit(request, db, "register", 5, 3600))) {
+        return json({ error: "محاولات إنشاء الحساب كثيرة. حاول لاحقًا." }, 429);
+      }
 
       try {
         const body = await readJson(request);
@@ -293,16 +329,19 @@ export default {
         // D1 batch runs these statements transactionally.
         await db.batch([
           db.prepare(
-            "INSERT INTO users (id, email, password_hash, password_salt) VALUES (?, ?, ?, ?)"
+            "INSERT INTO users (id, email, password_hash, password_salt, credits) VALUES (?, ?, ?, ?, 10)"
           ).bind(id, email, passwordHash, salt),
           db.prepare(
             "INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)"
-          ).bind(session.tokenHash, id, session.expires)
+          ).bind(session.tokenHash, id, session.expires),
+          db.prepare(
+            "INSERT INTO credit_transactions (id, user_id, amount, balance_after, reason) VALUES (?, ?, 10, 10, 'signup_grant')"
+          ).bind(crypto.randomUUID(), id)
         ]);
 
         console.log("REGISTER SUCCESS");
         return json(
-          { success: true, user: { id, email } },
+          { success: true, user: { id, email, credits: 10 } },
           201,
           { "Set-Cookie": sessionCookie(session.token) }
         );
@@ -319,6 +358,9 @@ export default {
     if (url.pathname === "/api/auth/login" && request.method === "POST") {
       if (!db) return json({ error: "قاعدة البيانات غير مربوطة." }, 500);
       if (!originAllowed(request, url)) return json({ error: "طلب غير مسموح." }, 403);
+      if (!(await checkRateLimit(request, db, "login", 10, 900))) {
+        return json({ error: "محاولات تسجيل الدخول كثيرة. حاول بعد 15 دقيقة." }, 429);
+      }
 
       try {
         const body = await readJson(request);
@@ -331,7 +373,7 @@ export default {
         }
 
         const user = await db.prepare(
-          "SELECT id, email, password_hash, password_salt FROM users WHERE email = ?"
+          "SELECT id, email, password_hash, password_salt, credits FROM users WHERE email = ?"
         ).bind(email).first();
 
         if (!user) return json({ error: "البريد أو كلمة المرور غير صحيحة." }, 401);
@@ -354,7 +396,7 @@ export default {
         const token = await createSession(db, user.id);
         console.log("LOGIN SUCCESS");
         return json(
-          { success: true, user: { id: user.id, email: user.email } },
+          { success: true, user: { id: user.id, email: user.email, credits: Number(user.credits || 0) } },
           200,
           { "Set-Cookie": sessionCookie(token) }
         );
@@ -409,36 +451,76 @@ export default {
         const body = await readJson(request);
         if (!body) return json({ error: "بيانات الطلب غير صحيحة." }, 400);
         const prompt = String(body.prompt || "").trim();
-        if (!prompt || prompt.length > 32000) {
-          return json({ error: "اكتب وصفًا صحيحًا للصورة." }, 400);
+        const size = String(body.size || "1024x1024");
+        const style = String(body.style || "واقعي سينمائي");
+        const allowedSizes = new Set(["1024x1024", "1024x1536", "1536x1024"]);
+        const allowedStyles = new Set(["واقعي سينمائي", "ثلاثي الأبعاد 3D", "أنمي", "فن رقمي", "تصميم تجريدي"]);
+        if (!prompt || prompt.length > 12000) {
+          return json({ error: "اكتب وصفًا صحيحًا للصورة (حتى 12000 حرف)." }, 400);
+        }
+        if (!allowedSizes.has(size) || !allowedStyles.has(style)) {
+          return json({ error: "اختيار الأسلوب أو الأبعاد غير صالح." }, 400);
         }
 
-        const response = await fetch("https://api.openai.com/v1/images/generations", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${env.OPENAI_API_KEY}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            model: "gpt-image-2.5-flare",
-            prompt,
-            size: "1024x1024",
-            n: 1
-          })
-        });
-
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          console.error("OPENAI IMAGE ERROR:", response.status, result.error?.message || "Unknown error");
-          return json(
-            { error: result.error?.message || "تعذر إنشاء الصورة." },
-            response.status
-          );
+        const debit = await db.prepare(
+          "UPDATE users SET credits = credits - 1 WHERE id = ? AND credits > 0"
+        ).bind(user.id).run();
+        if (Number(debit?.meta?.changes || 0) !== 1) {
+          const balance = await db.prepare("SELECT credits FROM users WHERE id = ?").bind(user.id).first();
+          return json({ error: "رصيدك غير كافٍ. لا توجد أرصدة متبقية.", credits: Number(balance?.credits || 0) }, 402);
         }
 
-        const image = result.data?.[0]?.b64_json;
-        if (!image) return json({ error: "لم تصل الصورة من OpenAI." }, 502);
-        return json({ image: `data:image/png;base64,${image}` });
+        let charged = true;
+        try {
+          const balance = await db.prepare("SELECT credits FROM users WHERE id = ?").bind(user.id).first();
+          await db.prepare(
+            "INSERT INTO credit_transactions (id, user_id, amount, balance_after, reason) VALUES (?, ?, -1, ?, 'image_generation')"
+          ).bind(crypto.randomUUID(), user.id, Number(balance?.credits || 0)).run();
+
+          const styledPrompt = `${prompt}\n\nVisual style: ${style}. Follow this style consistently while preserving the subject, composition, and requested details.`;
+          const response = await fetch("https://api.openai.com/v1/images/generations", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              model: env.IMAGE_MODEL || "gpt-image-2.5-flare",
+              prompt: styledPrompt,
+              size,
+              quality: "high",
+              n: 1
+            })
+          });
+
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            console.error("OPENAI IMAGE ERROR:", response.status, result.error?.message || "Unknown error");
+            await refundCredit(db, user.id);
+            charged = false;
+            return json(
+              { error: result.error?.message || "تعذر إنشاء الصورة. تمت إعادة الرصيد." },
+              response.status
+            );
+          }
+
+          const image = result.data?.[0]?.b64_json;
+          if (!image) {
+            await refundCredit(db, user.id);
+            charged = false;
+            return json({ error: "لم تصل الصورة. تمت إعادة الرصيد." }, 502);
+          }
+          charged = false;
+          const finalBalance = await db.prepare("SELECT credits FROM users WHERE id = ?").bind(user.id).first();
+          return json({ image: `data:image/png;base64,${image}`, credits: Number(finalBalance?.credits || 0) });
+        } catch (generationError) {
+          if (charged) {
+            try { await refundCredit(db, user.id); } catch (refundError) {
+              console.error("CREDIT REFUND ERROR:", refundError);
+            }
+          }
+          throw generationError;
+        }
       } catch (error) {
         console.error("IMAGE ERROR:", error);
         return json({ error: "حدث خطأ في معالجة الطلب." }, 500);
